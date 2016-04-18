@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+       <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close" scope="prototype">
+              <property name="driverClassName" value="org.hsqldb.jdbcDriver"/>
+              <property name="url" value="jdbc:hsqldb:jdbcDriver"/>
+              <property name="username" value="sa"/>
+              <property name="password" value=""/>
+       </bean>
+
+       <bean id="vendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+              <property name="generateDdl" value="true"/>
+              <!--<property name="showSql" value="true"/>-->
+              <property name="database" value="HSQL"/>
+              <property name="databasePlatform" value="com.finance.dennis.utilities.HSQLNumericWithPrecisionDialect"/>
+       </bean>
+
+</beans>

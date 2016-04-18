@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                            http://www.springframework.org/schema/beans/spring-beans.xsd
+                            http://www.springframework.org/schema/context
+                            http://www.springframework.org/schema/context/spring-context.xsd
+                            http://www.springframework.org/schema/data/jpa
+                            http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+                            http://www.springframework.org/schema/tx
+                            http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+       
+       <!--<import resource=""/>-->
+       
+       <context:annotation-config></context:annotation-config>
+       <jpa:repositories base-package="com.finance.dennis.repository"/>
+       <tx:annotation-driven transaction-manager="transactionManager"/>
+
+       <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+              <property name="packagesToScan" value="com.finance.dennis.domain"/>
+              <property name="dataSource" ref="dataSource"/>
+              <property name="jpaVendorAdapter" ref="vendorAdapter"/>
+              <property name="persistenceUnitName" value="${persistence.unit.name}"/>
+              <property name="sharedCacheMode" value="NONE"/>
+              <property name="validationMode" value="NONE"/>
+              <property name="jpaPropertyMap">
+                     <map>
+                            <entry key="hibernate.connection.autocommit" value="false"/>
+                            <entry key="hibernate.jdbc.batch_size" value="${persistence.batchsize}"/>
+                            <entry key="hibernate.jdbc.fetch_size" value="${persistence.fetchsize}"/>
+
+                            <!-- gnerated ddl -->
+                            <!--
+                            <entry key="javax.persistence.schema-generation.scripts.action" value="create"/>
+                            <entry key="javax.persistence.schema-generation.create-source" value="metadata"/>
+                            <entry key="javax.persistence.schema-generation.scripts.create-target" value="target/jap/sql/create-schema.sql"/>
+                            -->
+                     </map>
+              </property>
+       </bean>
+
+       <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+              <property name="entityManagerFactory" ref="entityManagerFactory"/>
+              <property name="dataSource" ref="dataSource"/>
+       </bean>
+</beans>

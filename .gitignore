@@ -1,0 +1,10 @@
+target
+
+#IntelliJ
+.idea
+*.iml
+*.ipr
+*.iws
+
+jdbcDriver.tmp
+jdbcDriver.*
