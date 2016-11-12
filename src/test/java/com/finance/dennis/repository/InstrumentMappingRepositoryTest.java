@@ -19,7 +19,7 @@ public class InstrumentMappingRepositoryTest extends RepositoryTest{
     private InstrumentMappingRepository instrumentMappingRepository;
 
     @Test
-    public void SaveAnd() {
+    public void SaveAndFind() {
         InstrumentMapping instrumentMapping = new InstrumentMapping("123456", "AStock");
         instrumentMappingRepository.save(instrumentMapping);
 
