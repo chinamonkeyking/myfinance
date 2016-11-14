@@ -53,8 +53,8 @@ public class JsoupTest {
             Elements elements = doc.select("div[class=fundSecNav]>a");
             Assert.assertEquals(14, elements.size());
 
-            ArrayList<String> types = new ArrayList<String>();
-            ArrayList<String> names = new ArrayList<String>();
+            ArrayList<String> types = new ArrayList();
+            ArrayList<String> names = new ArrayList();
             for (Element element : elements) {
                 // Skip the type for all funds
                 if (!ALL_OPEN_FUNDS_TYPE.equals(element.attr(ATTR_FUND_TYPE))) {
@@ -116,10 +116,10 @@ public class JsoupTest {
             Elements elements = doc.select("table[class=\"n_table m_table\"] > tbody > tr");
             Assert.assertEquals(3, elements.size());
 
-            ArrayList<String> dates = new ArrayList<String>();
-            ArrayList<String> netValues = new ArrayList<String>();
-            ArrayList<String> AccNetValues = new ArrayList<String>();
-            ArrayList<String> dailyChangePcts = new ArrayList<String>();
+            ArrayList<String> dates = new ArrayList();
+            ArrayList<String> netValues = new ArrayList();
+            ArrayList<String> AccNetValues = new ArrayList();
+            ArrayList<String> dailyChangePcts = new ArrayList();
             for (Element element : elements) {
                 Elements record = element.select("td");
                 Assert.assertEquals(4, record.size());
