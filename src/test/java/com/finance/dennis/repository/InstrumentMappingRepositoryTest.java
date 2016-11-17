@@ -20,7 +20,7 @@ public class InstrumentMappingRepositoryTest extends RepositoryTest{
 
     @Test
     public void SaveAndFind() {
-        InstrumentMapping instrumentMapping = new InstrumentMapping("123456", "AStock");
+        InstrumentMapping instrumentMapping = new InstrumentMapping("123456", "AStock", "Stock", null);
         instrumentMappingRepository.save(instrumentMapping);
 
         InstrumentMapping instrumentMappingInserted = instrumentMappingRepository.findOne(instrumentMapping.getInstrumentMappingId());

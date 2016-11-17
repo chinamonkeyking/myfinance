@@ -23,6 +23,21 @@ public class InstrumentMapping {
     @Column
     private String name;
 
+    @Column
+    private String type;
+
+    @Column
+    private String subtype;
+
+    public InstrumentMapping() {}
+
+    public InstrumentMapping(String code, String name, String type, String subtype) {
+        this.code = code;
+        this.name = name;
+        this.type = type;
+        this.subtype = subtype;
+    }
+
     public Long getInstrumentMappingId() {
         return instrumentMappingId;
     }
@@ -47,12 +62,20 @@ public class InstrumentMapping {
         this.name = name;
     }
 
-    public InstrumentMapping() {
+    public String getType() {
+        return type;
     }
 
-    public InstrumentMapping(String code, String name) {
-        this.code = code;
-        this.name = name;
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getSubtype() {
+        return subtype;
+    }
+
+    public void setSubtype(String subtype) {
+        this.subtype = subtype;
     }
 
     @Override
@@ -64,7 +87,9 @@ public class InstrumentMapping {
 
         if (!instrumentMappingId.equals(that.instrumentMappingId)) return false;
         if (!code.equals(that.code)) return false;
-        return name.equals(that.name);
+        if (!name.equals(that.name)) return false;
+        if (!type.equals(that.type)) return false;
+        return !(subtype != null ? !subtype.equals(that.subtype) : that.subtype != null);
 
     }
 
@@ -73,15 +98,8 @@ public class InstrumentMapping {
         int result = instrumentMappingId.hashCode();
         result = 31 * result + code.hashCode();
         result = 31 * result + name.hashCode();
+        result = 31 * result + type.hashCode();
+        result = 31 * result + (subtype != null ? subtype.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public String toString() {
-        return "InstrumentMapping{" +
-                "instrumentMappingId=" + instrumentMappingId +
-                ", code='" + code + '\'' +
-                ", name='" + name + '\'' +
-                '}';
     }
 }
