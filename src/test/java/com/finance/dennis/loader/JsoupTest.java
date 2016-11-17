@@ -9,6 +9,7 @@ import jdk.nashorn.internal.runtime.regexp.joni.encoding.IntHolder;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -18,7 +19,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +36,24 @@ public class JsoupTest {
     private static final String DEFAULT_BLANK_BASE_URL = "";
     private static final String ATTR_FUND_TYPE = "tit";
     private static final String ALL_OPEN_FUNDS_TYPE = "1";
+
+    private static final String USERAGNET = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36";
+    private static final String HX_FUND_URL_MAINPAGE = "http://jingzhi.funds.hexun.com/jz";
+    private static final String HX_FUND_URL_SUBPAGE_BASE = "http://jingzhi.funds.hexun.com/jz/JsonData/KaifangJingz.aspx?subtype=";
+    private static final String HX_FUND_URL_SUBPAGE_MONEY_BASE = "http://jingzhi.funds.hexun.com/jz/JsonData/HuobiJingz.aspx?subtype=";
+    private static final String HX_FUND_URL_NETVALUE_FOR_ONE_FUND_BASE = "http://jingzhi.funds.hexun.com/database/jzzs.aspx?startdate=1900-01-01&enddate=2099-12-31&fundcode=";
+
+    private static final String HX_FUND_SELECTOR_ALL_SUBTYPE = "div[class=fundSecNav]>a";
+    private static final String HX_FUND_SELECTOR_NETVALUE_FOR_ONE_FUND = "table[class=\"n_table m_table\"] > tbody > tr";
+    private static final String HX_FUND_PATTERN_ALL_FUND_IN_A_SUBTYPE = "callback\\((.*)\\)";
+
+    private static final HashMap<String, String> HF_MONEY_FUND_TYPES = new HashMap<String, String>() {{
+        put("40", "1");
+        put("70", "1");
+    }};
+
+    private static final int DEFAULT_SUBTYPE_CNT = 20;
+    private static final int DEFAULT_FUND_CNT = 5000;
 
     /*
     http://jingzhi.funds.hexun.com/jz/
@@ -50,7 +71,7 @@ public class JsoupTest {
         InputStream in = JsoupTest.class.getClassLoader().getResourceAsStream("files\\jingzhi_main_page.html");
         try {
             Document doc = Jsoup.parse(in, CHARSET_NAME, DEFAULT_BLANK_BASE_URL);
-            Elements elements = doc.select("div[class=fundSecNav]>a");
+            Elements elements = doc.select(HX_FUND_SELECTOR_ALL_SUBTYPE);
             Assert.assertEquals(14, elements.size());
 
             ArrayList<String> types = new ArrayList();
@@ -82,10 +103,10 @@ public class JsoupTest {
 
         try {
             String fileContent = IOUtils.toString(in, "GBK");
-            Pattern p= Pattern.compile("callback\\((.*)\\)");
-            Matcher m= p.matcher(fileContent);
+            Pattern p = Pattern.compile(HX_FUND_PATTERN_ALL_FUND_IN_A_SUBTYPE);
+            Matcher m = p.matcher(fileContent);
             String fundContent = "{}";
-            if(m.find()) {
+            if (m.find()) {
                 fundContent = m.group(1);
             }
 
@@ -113,7 +134,7 @@ public class JsoupTest {
         InputStream in = JsoupTest.class.getClassLoader().getResourceAsStream("files\\jingzhi_sample_110025.html");
         try {
             Document doc = Jsoup.parse(in, CHARSET_NAME, DEFAULT_BLANK_BASE_URL);
-            Elements elements = doc.select("table[class=\"n_table m_table\"] > tbody > tr");
+            Elements elements = doc.select(HX_FUND_SELECTOR_NETVALUE_FOR_ONE_FUND);
             Assert.assertEquals(3, elements.size());
 
             ArrayList<String> dates = new ArrayList();
@@ -145,8 +166,6 @@ public class JsoupTest {
     }
 
 
-
-
 //    @Test
 //    public void testEncoding() throws UnsupportedEncodingException {
 //        String chinese = "中文";//java内部编码
@@ -158,4 +177,198 @@ public class JsoupTest {
 //        unicodeChinese = new String(utf8Chinese.getBytes("ISO-8859-1"),"UTF-8");//java内部编码
 //        System.out.println(unicodeChinese);//中文
 //    }
+
+
+    @Test
+    public void testWorkFlow() throws Exception {
+        // Get main page
+        ArrayList<HXFundType> fundTypes = getHxFundTypes();
+        System.out.println(fundTypes);
+
+        // Get funds in each sub type
+        ArrayList<HXFund> funds = new ArrayList<>(DEFAULT_FUND_CNT);
+        for (HXFundType fundType : fundTypes) {
+            Document doc = null;
+            try {
+                // Get page
+                //doc = Jsoup.connect(HX_FUND_URL_SUBPAGE_BASE + fundType.getType()).userAgent(USERAGNET).maxBodySize(0).get();
+                String url = null;
+                if (HF_MONEY_FUND_TYPES.containsKey(fundType.getType())) {
+                    url = HX_FUND_URL_SUBPAGE_MONEY_BASE + fundType.getType();
+                } else {
+                    url = HX_FUND_URL_SUBPAGE_BASE + fundType.getType();
+                }
+                System.out.println(url);
+                doc = getURL(url);
+
+                // Get the content containing fund information
+                String content = doc.html();
+                Pattern p = Pattern.compile(HX_FUND_PATTERN_ALL_FUND_IN_A_SUBTYPE);
+                Matcher m = p.matcher(content);
+                String fundContent = "{}";
+                if (m.find()) {
+                    fundContent = m.group(1);
+                }
+
+                // Parse content to funds
+                JSONObject fundsInPage = new JSONObject(fundContent);
+                int fundCnt = fundsInPage.getInt("sum");
+                System.out.print(fundType + "->");
+                System.out.println(fundCnt);
+
+                final IntHolder cnt = new IntHolder();
+                JSONArray fundList = fundsInPage.getJSONArray("list");
+                fundList.forEach(o -> {
+                            //JSONObject fund = (JSONObject) o;
+                            //System.out.println(fund.getString("fundCode") + fund.getString("fundName"));
+                            cnt.value++;
+                        }
+                );
+                Assert.assertEquals(fundCnt, cnt.value);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw e;
+            }
+
+        }
+
+    }
+
+    private Document getURL(String url) throws IOException {
+        // userAgent() for some websites is a must
+        // maxBodySize() is a must if the content is more than 1MB (The default maximum is 1MB）
+        // ignoreContentType(true) sometimes is a must. otherwise error
+
+        //Connection.Response response = Jsoup.connect(url).ignoreContentType(true).userAgent(USERAGNET).maxBodySize(0).execute();
+        //System.out.println(response.charset());
+        //response.charset(CHARSET_NAME);
+        //System.out.println(response.charset());
+        //Document doc = response.parse();
+        //System.out.println(doc.charset());
+        //System.out.println(Charset.isSupported("UTF8"));
+        //return doc;
+
+        return Jsoup.connect(url).ignoreContentType(true).userAgent(USERAGNET).maxBodySize(0).execute().charset(CHARSET_NAME).parse();
+    }
+
+    private ArrayList<HXFundType> getHxFundTypes() throws IOException {
+        Document doc = null;
+        try {
+            // userAgent() for some websites is a must
+            // maxBodySize() is a must if the content is more than 1MB
+            //doc = Jsoup.connect(HX_FUND_URL_MAINPAGE).userAgent(USERAGNET).maxBodySize(0).get();
+            doc = getURL(HX_FUND_URL_MAINPAGE);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
+        }
+        ArrayList<HXFundType> fundTypes = new ArrayList<>(DEFAULT_SUBTYPE_CNT);
+        Elements types = doc.select(HX_FUND_SELECTOR_ALL_SUBTYPE);
+        for (Element type : types) {
+            // Skip the type for all funds
+            if (!ALL_OPEN_FUNDS_TYPE.equals(type.attr(ATTR_FUND_TYPE))) {
+                fundTypes.add(new HXFundType(type.text(), type.attr(ATTR_FUND_TYPE)));
+            }
+        }
+        return fundTypes;
+    }
+
+    static final class HXFundType {
+        private final String name;
+        private final String type;
+
+        public HXFundType(String name, String type) {
+            this.name = name;
+            this.type = type;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        @Override
+        public String toString() {
+            return "HXFundType{" +
+                    "name='" + name + '\'' +
+                    ", type='" + type + '\'' +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            HXFundType that = (HXFundType) o;
+
+            if (!name.equals(that.name)) return false;
+            return type.equals(that.type);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = name.hashCode();
+            result = 31 * result + type.hashCode();
+            return result;
+        }
+    }
+
+    static final class HXFund {
+        private final String name;
+        private final String code;
+        private final HXFundType hxFundType;
+
+        public HXFund(String name, String code, HXFundType hxFundType) {
+            this.name = name;
+            this.code = code;
+            this.hxFundType = hxFundType;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public HXFundType getHxFundType() {
+            return hxFundType;
+        }
+
+        @Override
+        public String toString() {
+            return "HXFund{" +
+                    "name='" + name + '\'' +
+                    ", code='" + code + '\'' +
+                    ", hxFundType=" + hxFundType +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            HXFund hxFund = (HXFund) o;
+
+            if (!name.equals(hxFund.name)) return false;
+            if (!code.equals(hxFund.code)) return false;
+            return hxFundType.equals(hxFund.hxFundType);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = name.hashCode();
+            result = 31 * result + code.hashCode();
+            result = 31 * result + hxFundType.hashCode();
+            return result;
+        }
+    }
 }
