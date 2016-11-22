@@ -9,7 +9,6 @@ import jdk.nashorn.internal.runtime.regexp.joni.encoding.IntHolder;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -19,9 +18,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,6 +41,7 @@ public class JsoupTest {
     private static final String HX_FUND_URL_SUBPAGE_BASE = "http://jingzhi.funds.hexun.com/jz/JsonData/KaifangJingz.aspx?subtype=";
     private static final String HX_FUND_URL_SUBPAGE_MONEY_BASE = "http://jingzhi.funds.hexun.com/jz/JsonData/HuobiJingz.aspx?subtype=";
     private static final String HX_FUND_URL_NETVALUE_FOR_ONE_FUND_BASE = "http://jingzhi.funds.hexun.com/database/jzzs.aspx?startdate=1900-01-01&enddate=2099-12-31&fundcode=";
+    private static final String HX_FUND_URL_NETVALUE_FOR_ONE_MONEY_FUND_BASE = "http://jingzhi.funds.hexun.com/database/jzzshb.aspx?startdate=1900-01-01&enddate=2099-12-31&fundcode=";
 
     private static final String HX_FUND_SELECTOR_ALL_SUBTYPE = "div[class=fundSecNav]>a";
     private static final String HX_FUND_SELECTOR_NETVALUE_FOR_ONE_FUND = "table[class=\"n_table m_table\"] > tbody > tr";
@@ -178,7 +178,6 @@ public class JsoupTest {
 //        System.out.println(unicodeChinese);//ÖÐÎÄ
 //    }
 
-
     @Test
     public void testWorkFlow() throws Exception {
         // Get main page
@@ -186,20 +185,18 @@ public class JsoupTest {
         System.out.println(fundTypes);
 
         // Get funds in each sub type
+        List<HXFund> funds = getHxFunds(fundTypes);
+    }
+
+    private List<HXFund> getHxFunds(ArrayList<HXFundType> fundTypes) throws IOException {
         ArrayList<HXFund> funds = new ArrayList<>(DEFAULT_FUND_CNT);
         for (HXFundType fundType : fundTypes) {
             Document doc = null;
             try {
                 // Get page
-                //doc = Jsoup.connect(HX_FUND_URL_SUBPAGE_BASE + fundType.getType()).userAgent(USERAGNET).maxBodySize(0).get();
-                String url = null;
-                if (HF_MONEY_FUND_TYPES.containsKey(fundType.getType())) {
-                    url = HX_FUND_URL_SUBPAGE_MONEY_BASE + fundType.getType();
-                } else {
-                    url = HX_FUND_URL_SUBPAGE_BASE + fundType.getType();
-                }
+                String url = constructSubPageURL(fundType);
                 System.out.println(url);
-                doc = getURL(url);
+                doc = readFromUrl(url);
 
                 // Get the content containing fund information
                 String content = doc.html();
@@ -216,25 +213,31 @@ public class JsoupTest {
                 System.out.print(fundType + "->");
                 System.out.println(fundCnt);
 
-                final IntHolder cnt = new IntHolder();
-                JSONArray fundList = fundsInPage.getJSONArray("list");
-                fundList.forEach(o -> {
-                            //JSONObject fund = (JSONObject) o;
-                            //System.out.println(fund.getString("fundCode") + fund.getString("fundName"));
-                            cnt.value++;
-                        }
-                );
-                Assert.assertEquals(fundCnt, cnt.value);
+//                final IntHolder cnt = new IntHolder();
+//                JSONArray fundList = fundsInPage.getJSONArray("list");
+//                fundList.forEach(o -> {
+//                            //JSONObject fund = (JSONObject) o;
+//                            //System.out.println(fund.getString("fundCode") + fund.getString("fundName"));
+//                            cnt.value++;
+//                        }
+//                );
+//                Assert.assertEquals(fundCnt, cnt.value);
             } catch (IOException e) {
                 e.printStackTrace();
                 throw e;
             }
-
         }
-
+        return funds;
     }
 
-    private Document getURL(String url) throws IOException {
+    private String constructSubPageURL(HXFundType fundType) {
+        if (HF_MONEY_FUND_TYPES.containsKey(fundType.getType())) {
+            return HX_FUND_URL_SUBPAGE_MONEY_BASE + fundType.getType();
+        }
+        return HX_FUND_URL_SUBPAGE_BASE + fundType.getType();
+    }
+
+    private Document readFromUrl(String url) throws IOException {
         // userAgent() for some websites is a must
         // maxBodySize() is a must if the content is more than 1MB (The default maximum is 1MB£©
         // ignoreContentType(true) sometimes is a must. otherwise error
@@ -257,7 +260,7 @@ public class JsoupTest {
             // userAgent() for some websites is a must
             // maxBodySize() is a must if the content is more than 1MB
             //doc = Jsoup.connect(HX_FUND_URL_MAINPAGE).userAgent(USERAGNET).maxBodySize(0).get();
-            doc = getURL(HX_FUND_URL_MAINPAGE);
+            doc = readFromUrl(HX_FUND_URL_MAINPAGE);
         } catch (IOException e) {
             e.printStackTrace();
             throw e;
